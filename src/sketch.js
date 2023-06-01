@@ -1,36 +1,31 @@
-const w = 720
-const h = 400
-const FOODCOUNT = 5;
-const DEV = true;
-let ENTETIES = [];
+let wasps;
 let FOOD = [];
 function setup() {
     angleMode(DEGREES);
     // Set simulation framerate to 10 to avoid flickering
     frameRate(20);
-    createCanvas(w, h);
     
+    let canvas = createCanvas(WIDTH, HEIGHT);
+    canvas.parent('canvascontainer');
     for(let i = 0; i < FOODCOUNT; i++){
-        FOOD.push(new Food(random(w),random(h)))
+        FOOD.push(new Food(random(WIDTH),random(HEIGHT)))
     }
-    createEntity(Wasp, createVector(w/2,h/2))
-    //createEntity(Wasp, createVector(w/2,h/2))
-    //createEntity(Wasp, createVector(w/2,h/2))
-    console.log(ENTETIES.closestFood)
-}
-function createEntity(entity, position){
-    ENTETIES.push(new entity(position.x, position.y, FOOD));
 
+    wasps = new EntityHandler(3)
+    console.log(wasps)
+
+    
+    //createEntity(Wasp, createVector(w/2,h/2))
+    //createEntity(Wasp, createVector(w/2,h/2))
+    
+    
 }
+
 
 function draw() {
-    background(255);
-    ENTETIES.forEach((wasp, index)=>{
-        if(wasp.dead) {ENTETIES.splice(index, 1); return};
-        wasp.tick();
-        //console.log(wasp.closestFood.position.x+", "+wasp.closestFood.position.y)
-    })
-    
+    background(174, 255, 128);
+    wasps.updateAlive(true)    
+    //wasps.population[0].show()
     FOOD.forEach(f => f.display())
     //wasp.move(45, 1);
 }

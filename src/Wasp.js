@@ -1,74 +1,121 @@
-function distance(v1, v2) {
-    let a = v1.x-v2.x
-    let b = v1.y-v2.y
-    let d = sqrt((abs(a)^2)+(abs(b)^2)) 
-    //console.log(v2.x+ ", "+ v2.y+", distance: "+d)
-    return d;
-}
-function closestDistance(v, cArr){
-    let i = 0
-    console.log("food array lenght: " + FOOD.length)
-    FOOD.forEach((value, index, array)=>{
-        //console.log("Food: "+value.position.x + ", "+ value.position.y+", distance: "+distance(v, value.position))
-        if(distance(v, value.position)<distance(v,FOOD[i].position)){
-            i = index;
-        }
-    })
-    return FOOD[i];
-}
-
 class Wasp {
-    constructor(x, y) {
-        this.color = color(
-            floor(random(255)),
-            floor(random(255)),
-            floor(random(255))
-        );
-        this.hunger = 100;
-        this.position = createVector(x, y);
-        this.maxSpeed = 7;
-        this.speed = 0;
-        this.angle = 0;
-        this.closestFood = closestDistance(this.position, FOOD)
-        this.brain = new Brain(this)
-        this.dead = false
-        
-    }
-    tick(){
-        if(this.dead)return;
-        if(this.hunger <= 0){
-            this.dead = true
-        }
-        FOOD.forEach((food, index) =>{
-            if(distance(this.position, food.position)<2){
-                this.eat(food, index)
-            }
-        })
-        this.display()
-        this.brain.loop()
-        
-    }
-    eat(food, index){
-        FOOD.splice(index, 1)
-        this.hunger = 100
+    constructor(id) {
+        this.brain = new Genome(GENOME_INPUTS, GENOME_OUTPUTS);
+        this.fitness;
+        this.score = 1;
+        this.lifespan = 0;
+        this.dead = false;
+        this.decisions = []; //Current Output values
+        this.vision = []; //Current input values
+
+        this.x = 300;
+        this.y = 300;
+
+        this.vx = 0;
+        this.vy = 0;
+
+        this.radius = 7;
     }
 
-    display() {
-        // method!
-        fill(this.color);
-        ellipse(this.position.x, this.position.y, 30, 30);
-        if(DEV){
-            line(this.position.x, this.position.y, this.closestFood.position.x, this.closestFood.position.y)
+    clone() {
+        //Returns a copy of this player
+        let clone = new Player();
+        clone.brain = this.brain.clone();
+        return clone;
+    }
+
+    crossover(parent) {
+        //Produce a child
+        let child = new Player();
+        if (parent.fitness < this.fitness)
+            child.brain = this.brain.crossover(parent.brain);
+        else child.brain = parent.brain.crossover(this.brain);
+
+        child.brain.mutate();
+        return child;
+    }
+
+    look() {
+        //Look and normalize
+        var trg = closestDistance(createVector(this.x, this.y));
+        var dist =
+            Math.sqrt(this.x, this.y, trg.position.x, trg.position.y) /
+            Math.sqrt(width ** 2 + height ** 2);
+        var targetAngle =
+            (angleToCoords(this.x, this.y, trg.position.x, trg.position.y) /
+                Math.PI) *
+            2;
+        var vx = (this.vx + MAX_SPEED) / MAX_SPEED;
+        var vy = (this.vy + MAX_SPEED) / MAX_SPEED;
+
+        // NaN checking
+        targetAngle = isNaN(targetAngle) ? 0 : targetAngle;
+        dist = isNaN(dist) ? 0 : dist;
+
+        this.vision = [vx, vy, dist, targetAngle];
+    }
+    think() {
+        this.decisions = this.brain.feedForward(this.vision);
+    }
+    
+    move() {
+        var moveAngle = this.decisions[0] * 2 * Math.PI;
+
+        // Calculate next position
+        let ax = Math.cos(moveAngle);
+        let ay = Math.sin(moveAngle);
+        this.vx += ax;
+        this.vy += ay;
+
+        // Limit speeds to maximum speed
+        this.vx =
+            this.vx > MAX_SPEED
+                ? MAX_SPEED
+                : this.vx < -MAX_SPEED
+                ? -MAX_SPEED
+                : this.vx;
+        this.vy =
+            this.vy > MAX_SPEED
+                ? MAX_SPEED
+                : this.vy < -MAX_SPEED
+                ? -MAX_SPEED
+                : this.vy;
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Limit position to width and height
+        this.x = this.x >= width ? width : this.x <= 0 ? 0 : this.x;
+        this.y = this.y >= height ? height : this.y <= 0 ? 0 : this.y;
+
+        //Change direction against walls
+        if (this.x == 0 || this.x == width) this.vx = -this.vx;
+        if (this.y == 0 || this.y == height) this.vy = -this.vy;
+    }
+
+    show() {
+        var angle =
+            angleToCoords(this.x, this.y, this.x + this.vx, this.y + this.vy) +
+            Math.PI / 2;
+        var op = map(this.score, 0, MAX_SCORE, 25, 255);
+        fill(255, 213, 0)
+        push();
+        translate(this.x, this.y);
+        rotate(angle);
+        noStroke();
+        triangle(
+            -this.radius,
+            this.radius,
+            this.radius,
+            this.radius,
+            0,
+            -this.radius
+        );
+        pop();
+        if (DEV) {
+            var trg = closestDistance(createVector(this.x, this.y));
+            line(this.x, this.y, trg.position.x, trg.position.y);
         }
+        
     }
-    turn(angle){
-        this.angle = angle*360;
-    }
-    move(s) {
-        // method!
-        this.speed = s;
-        this.position.x += this.speed * this.maxSpeed * cos(this.angle);
-        this.position.y += this.speed * this.maxSpeed * sin(this.angle);
-        this.hunger -= 0.5;
-    }
-} //end class Car
+}
